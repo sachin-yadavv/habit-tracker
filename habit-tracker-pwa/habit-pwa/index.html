@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1D9E75">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Habits">
+<title>My Habit Tracker</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --green:#1D9E75; --green-l:#E1F5EE; --green-d:#0F6E56;
+  --amber:#BA7517; --amber-l:#FAEEDA;
+  --red:#E24B4A; --red-l:#FCEBEB;
+  --blue:#185FA5; --blue-l:#E6F1FB;
+  --bg:#f4f4f2; --card:#fff; --border:rgba(0,0,0,0.09);
+  --text:#1a1a1a; --text2:#666; --text3:#aaa;
+  --r:12px; --rs:8px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#111; --card:#1c1c1e; --border:rgba(255,255,255,0.1);
+    --text:#f2f2f7; --text2:#98989f; --text3:#48484a;
+    --green-l:rgba(29,158,117,.18); --amber-l:rgba(186,117,23,.18);
+    --red-l:rgba(226,75,74,.18); --blue-l:rgba(24,95,165,.18);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+
+/* TOP BAR */
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 16px 10px;flex-shrink:0;padding-top:calc(12px + env(safe-area-inset-top,0px))}
+.topbar-row{display:flex;align-items:center;justify-content:space-between}
+.topbar h1{font-size:17px;font-weight:700}
+.topbar p{font-size:11px;color:var(--text2);margin-top:1px}
+.topbar-actions{display:flex;gap:6px}
+
+/* STATS BAR */
+.statsbar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 12px;background:var(--bg);flex-shrink:0}
+.scard{background:var(--card);border-radius:var(--rs);padding:8px 10px;border:1px solid var(--border)}
+.scard-label{font-size:9px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.scard-val{font-size:18px;font-weight:700;margin-top:2px}
+.g{color:var(--green)}.a{color:var(--amber)}.b{color:var(--blue)}.r{color:var(--red)}
+
+/* SCROLL AREA */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 16px}
+
+/* BOTTOM NAV */
+.bottomnav{background:var(--card);border-top:1px solid var(--border);display:flex;flex-shrink:0;padding-bottom:var(--safe-bottom)}
+.navbtn{flex:1;padding:10px 4px 8px;border:none;background:none;color:var(--text2);font-size:9px;font-weight:600;letter-spacing:.03em;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;transition:color .15s}
+.navbtn i{font-size:20px}
+.navbtn.active{color:var(--green)}
+
+/* PANELS */
+.panel{display:none}.panel.active{display:block}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.sec{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+
+/* BUTTONS */
+.btn{padding:8px 14px;border-radius:var(--rs);border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.btn-g{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-r{background:var(--red-l);color:var(--red);border-color:transparent}
+.btn-sm{padding:5px 10px;font-size:11px}
+
+/* CHECKBOXES */
+.cb{width:22px;height:22px;border:2px solid var(--border);border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s;background:var(--card)}
+.cb:active{transform:scale(.9)}
+.cb.chk{background:var(--green);border-color:var(--green)}
+.cb.chk::after{content:'✓';color:#fff;font-size:13px;font-weight:700}
+.cb.tod{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+.cb.fut{opacity:.25;pointer-events:none;border-style:dashed}
+
+/* PILLS */
+.pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block}
+.pill.hi{background:var(--green-l);color:var(--green-d)}
+.pill.md{background:var(--amber-l);color:var(--amber)}
+.pill.lo{background:var(--red-l);color:var(--red)}
+
+/* RINGS GRID */
+.rings{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:12px}
+.rday{background:var(--card);border:1px solid var(--border);border-radius:var(--rs);padding:6px 4px;text-align:center}
+.rday.istoday{border-color:var(--green);border-width:2px}
+.rday-n{font-size:9px;font-weight:700;color:var(--text2)}
+.rday-d{font-size:8px;color:var(--text3)}
+
+/* TODAY TASKS */
+.task{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:.5px solid var(--border)}
+.task:last-child{border-bottom:none}
+.task-txt{flex:1;font-size:14px}
+.task-txt.done{text-decoration:line-through;color:var(--text3)}
+.stk{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--amber-l);color:var(--amber)}
+
+/* MONTHLY GRID */
+.grid-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.hg{border-collapse:collapse;font-size:10px}
+table.hg th{font-weight:600;color:var(--text2);padding:4px 3px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap}
+table.hg td{padding:3px 2px;text-align:center;vertical-align:middle;border-bottom:.5px solid var(--border)}
+.hn{text-align:left!important;white-space:nowrap;padding-right:10px!important;min-width:120px;font-size:11px;font-weight:500}
+.wsep{border-left:2px solid var(--border)!important}
+
+/* PROGRESS BAR */
+.pbar{height:7px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:12px}
+.pfill{height:100%;background:var(--green);border-radius:4px;transition:width .3s}
+
+/* ANALYTICS */
+.aitem{margin-bottom:8px}
+.aitem-top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.bbar{height:5px;background:var(--bg);border-radius:3px;overflow:hidden}
+.bfill{height:100%;border-radius:3px;transition:width .4s}
+
+/* ADD HABIT */
+.add-form{display:flex;flex-direction:column;gap:8px}
+.add-form input,.add-form select{padding:11px 12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--card);color:var(--text);font-size:14px;width:100%}
+.add-form input:focus,.add-form select:focus{outline:2px solid var(--green);border-color:transparent}
+
+/* MONTH NAV */
+.mnav{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.mnav h2{flex:1;font-size:15px;font-weight:700;text-align:center}
+
+/* HABIT LIST */
+.hitem{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:6px}
+.hitem-name{flex:1;font-size:13px}
+
+/* BIG RING */
+.bigring{display:flex;flex-direction:column;align-items:center;padding:8px 0 12px}
+
+/* TOAST */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--green);color:#fff;padding:10px 20px;border-radius:30px;font-size:13px;font-weight:600;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* INSTALL BANNER */
+.install-banner{background:var(--green);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;font-size:12px;flex-shrink:0}
+.install-banner.hidden{display:none}
+.install-banner strong{flex:1}
+.install-btn{background:rgba(255,255,255,.25);color:#fff;border:1px solid rgba(255,255,255,.4);padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer}
+
+/* CHART FIX */
+canvas{max-width:100%}
+</style>
+</head>
+<body>
+
+<div class="install-banner hidden" id="installBanner">
+  <i class="ti ti-apps" style="font-size:20px"></i>
+  <strong>Install as app on your home screen!</strong>
+  <button class="install-btn" onclick="installApp()">Install</button>
+  <button style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0 4px" onclick="document.getElementById('installBanner').classList.add('hidden')">×</button>
+</div>
+
+<div class="topbar">
+  <div class="topbar-row">
+    <div>
+      <h1>🎯 Habit Tracker</h1>
+      <p id="topDate">Loading...</p>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-sm" onclick="exportCSV()"><i class="ti ti-download"></i></button>
+    </div>
+  </div>
+</div>
+
+<div class="statsbar" id="statsBar"></div>
+
+<div class="scroll" id="mainScroll">
+
+  <!-- TODAY -->
+  <div class="panel active" id="tab-today">
+    <div class="card">
+      <div class="sec">Today's progress</div>
+      <div class="bigring"><svg id="bigRing" width="140" height="140" role="img" aria-label="Today completion"></svg></div>
+      <div style="text-align:center;margin-top:-4px" id="todayMotivation"></div>
+    </div>
+    <div class="card">
+      <div class="sec">Last 7 days</div>
+      <div class="rings" id="weekRings"></div>
+    </div>
+    <div class="card">
+      <div class="sec">Today's habits — <span id="todayDateLabel"></span></div>
+      <div id="taskList"></div>
+    </div>
+    <div class="card">
+      <div class="sec">14-day trend</div>
+      <div style="position:relative;height:150px"><canvas id="trendChart" role="img" aria-label="14-day trend"></canvas></div>
+    </div>
+  </div>
+
+  <!-- MONTHLY -->
+  <div class="panel" id="tab-monthly">
+    <div class="card">
+      <div class="mnav">
+        <button class="btn btn-sm" onclick="changeMonth(-1)"><i class="ti ti-arrow-left"></i></button>
+        <h2 id="monthLabel"></h2>
+        <button class="btn btn-sm" onclick="changeMonth(1)"><i class="ti ti-arrow-right"></i></button>
+      </div>
+      <div id="monthMeta" style="font-size:11px;color:var(--text2);display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px"></div>
+      <div class="pbar"><div class="pfill" id="monthBar" style="width:0%"></div></div>
+      <div class="grid-wrap"><table class="hg" id="mainGrid"></table></div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS -->
+  <div class="panel" id="tab-analytics">
+    <div class="card">
+      <div class="sec">This month — habit ranking</div>
+      <div id="analyticsItems"></div>
+    </div>
+    <div class="card">
+      <div class="sec">6-month history</div>
+      <div style="position:relative;height:180px"><canvas id="monthlyChart" role="img" aria-label="Monthly history"></canvas></div>
+    </div>
+  </div>
+
+  <!-- MANAGE -->
+  <div class="panel" id="tab-manage">
+    <div class="card">
+      <div class="sec">Add new habit</div>
+      <div class="add-form">
+        <input type="text" id="newName" placeholder="e.g. Morning run, Read 30 min..." maxlength="35">
+        <select id="newEmoji">
+          <option value="⏰">⏰ Wake up early</option>
+          <option value="🏋️">🏋️ Gym / Workout</option>
+          <option value="🏃">🏃 Running</option>
+          <option value="📚">📚 Reading / Learning</option>
+          <option value="💰">💰 Budget Tracking</option>
+          <option value="💻">💻 Project Work</option>
+          <option value="🌿">🌿 Social Media Detox</option>
+          <option value="📔">📔 Goal Journaling</option>
+          <option value="🚿">🚿 Cold Shower</option>
+          <option value="🥗">🥗 Healthy Meal</option>
+          <option value="💊">💊 Vitamins</option>
+          <option value="🧘">🧘 Meditation</option>
+          <option value="💧">💧 Drink Water</option>
+          <option value="😴">😴 Sleep 8hrs</option>
+          <option value="📱">📱 No Phone</option>
+          <option value="⭐">⭐ Other</option>
+        </select>
+        <button class="btn btn-g" onclick="addHabit()" style="width:100%;justify-content:center"><i class="ti ti-plus"></i> Add Habit</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec">Your habits</div>
+      <div id="habitList"></div>
+    </div>
+    <div class="card">
+      <div class="sec">Data</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn" onclick="exportCSV()" style="justify-content:center"><i class="ti ti-download"></i> Export CSV (for Google Sheets)</button>
+        <button class="btn" onclick="exportJSON()" style="justify-content:center"><i class="ti ti-file"></i> Backup data (JSON)</button>
+        <button class="btn" onclick="triggerImport()" style="justify-content:center"><i class="ti ti-upload"></i> Restore backup</button>
+        <button class="btn btn-r" onclick="resetAll()" style="justify-content:center"><i class="ti ti-trash"></i> Reset all data</button>
+      </div>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
+    </div>
+  </div>
+
+</div><!-- end scroll -->
+
+<nav class="bottomnav">
+  <button class="navbtn active" onclick="switchTab('today',this)" id="nav-today">
+    <i class="ti ti-home"></i>Today
+  </button>
+  <button class="navbtn" onclick="switchTab('monthly',this)" id="nav-monthly">
+    <i class="ti ti-calendar"></i>Monthly
+  </button>
+  <button class="navbtn" onclick="switchTab('analytics',this)" id="nav-analytics">
+    <i class="ti ti-chart-bar"></i>Stats
+  </button>
+  <button class="navbtn" onclick="switchTab('manage',this)" id="nav-manage">
+    <i class="ti ti-settings"></i>Manage
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS=['Su','Mo','Tu','We','Th','Fr','Sa'];
+const DAYSFULL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+let S={
+  habits:[
+    {id:1,name:'Wake up at 05:00',emoji:'⏰'},
+    {id:2,name:'Gym',emoji:'🏋️'},
+    {id:3,name:'Reading / Learning',emoji:'📚'},
+    {id:4,name:'Budget Tracking',emoji:'💰'},
+    {id:5,name:'Project Work',emoji:'💻'},
+    {id:6,name:'Social Media Detox',emoji:'🌿'},
+    {id:7,name:'Goal Journaling',emoji:'📔'},
+    {id:8,name:'Cold Shower',emoji:'🚿'}
+  ],
+  checks:{},
+  viewMonth:new Date().getMonth(),
+  viewYear:new Date().getFullYear(),
+  nextId:9
+};
+
+const now=new Date();
+const charts={};
+let deferredPrompt=null;
+
+// PWA install
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  deferredPrompt=e;
+  document.getElementById('installBanner').classList.remove('hidden');
+});
+window.addEventListener('appinstalled',()=>{
+  document.getElementById('installBanner').classList.add('hidden');
+  toast('App installed! Find it on your home screen 🎉');
+});
+function installApp(){
+  if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.then(r=>{deferredPrompt=null;document.getElementById('installBanner').classList.add('hidden');});}
+}
+
+// Service worker
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+
+function save(){try{localStorage.setItem('htracker2',JSON.stringify(S));}catch(e){}}
+function load(){try{const d=localStorage.getItem('htracker2');if(d)S=JSON.parse(d);}catch(e){}}
+
+function k(y,m,d,hid){return `${y}|${m}|${d}|${hid}`}
+function isChecked(y,m,d,hid){return !!S.checks[k(y,m,d,hid)]}
+function toggle(y,m,d,hid){
+  const key=k(y,m,d,hid);
+  if(S.checks[key])delete S.checks[key];else S.checks[key]=1;
+  save();render();
+}
+function daysInMonth(y,m){return new Date(y,m+1,0).getDate()}
+function dayPct(y,m,d){
+  if(!S.habits.length)return 0;
+  return Math.round(S.habits.filter(h=>isChecked(y,m,d,h.id)).length/S.habits.length*100);
+}
+function monthPct(y,m){
+  const days=daysInMonth(y,m);
+  const lastDay=(y===now.getFullYear()&&m===now.getMonth())?now.getDate():days;
+  if(!S.habits.length||!lastDay)return 0;
+  let done=0;
+  for(let d=1;d<=lastDay;d++)S.habits.forEach(h=>{if(isChecked(y,m,d,h.id))done++;});
+  return Math.round(done/(S.habits.length*lastDay)*100);
+}
+function habitMPct(hid){
+  const y=S.viewYear,m=S.viewMonth;
+  const lastDay=(y===now.getFullYear()&&m===now.getMonth())?now.getDate():daysInMonth(y,m);
+  if(!lastDay)return 0;
+  let done=0;
+  for(let d=1;d<=lastDay;d++)if(isChecked(y,m,d,hid))done++;
+  return Math.round(done/lastDay*100);
+}
+function streak(hid){
+  let s=0,d=new Date(now);
+  while(true){if(!isChecked(d.getFullYear(),d.getMonth(),d.getDate(),hid))break;s++;d.setDate(d.getDate()-1);}
+  return s;
+}
+function pc(p){return p>=80?'hi':p>=50?'md':'lo'}
+function bc(p){return p>=80?'var(--green)':p>=50?'var(--amber)':'var(--red)'}
+
+function addHabit(){
+  const name=document.getElementById('newName').value.trim();
+  const emoji=document.getElementById('newEmoji').value;
+  if(!name)return toast('Enter a habit name first!');
+  S.habits.push({id:S.nextId++,name,emoji});
+  document.getElementById('newName').value='';
+  save();render();toast(emoji+' '+name+' added!');
+}
+function removeHabit(id){
+  if(!confirm('Remove this habit and all its data?'))return;
+  S.habits=S.habits.filter(h=>h.id!==id);
+  save();render();toast('Habit removed');
+}
+function changeMonth(d){
+  S.viewMonth+=d;
+  if(S.viewMonth>11){S.viewMonth=0;S.viewYear++;}
+  if(S.viewMonth<0){S.viewMonth=11;S.viewYear--;}
+  save();render();
+}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+function switchTab(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('mainScroll').scrollTop=0;
+  render();
+}
+function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+function render(){
+  const y=now.getFullYear(),m=now.getMonth(),d=now.getDate();
+  document.getElementById('topDate').textContent=DAYSFULL[now.getDay()]+', '+d+' '+MONTHS[m];
+  const tp=dayPct(y,m,d),mp=monthPct(y,m),done=S.habits.filter(h=>isChecked(y,m,d,h.id)).length;
+  let best=0;S.habits.forEach(h=>{const s=streak(h.id);if(s>best)best=s;});
+  document.getElementById('statsBar').innerHTML=`
+    <div class="scard"><div class="scard-label">Today</div><div class="scard-val g">${tp}%</div></div>
+    <div class="scard"><div class="scard-label">Done</div><div class="scard-val b">${done}/${S.habits.length}</div></div>
+    <div class="scard"><div class="scard-label">Month</div><div class="scard-val a">${mp}%</div></div>
+    <div class="scard"><div class="scard-label">Streak</div><div class="scard-val r">${best}🔥</div></div>
+  `;
+  const ap=document.querySelector('.panel.active')?.id;
+  if(ap==='tab-today')renderToday();
+  if(ap==='tab-monthly')renderMonthly();
+  if(ap==='tab-analytics')renderAnalytics();
+  if(ap==='tab-manage')renderManage();
+}
+
+function renderToday(){
+  const y=now.getFullYear(),m=now.getMonth(),d=now.getDate();
+  const p=dayPct(y,m,d);
+  const col=p>=80?'#1D9E75':p>=50?'#BA7517':'#E24B4A';
+  const r=60,cx=70,cy=70,circ=2*Math.PI*r;
+  const svg=document.getElementById('bigRing');
+  svg.setAttribute('viewBox','0 0 140 140');
+  svg.innerHTML=`
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}22" stroke-width="13"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="13" stroke-linecap="round"
+      stroke-dasharray="${circ*p/100} ${circ}" transform="rotate(-90 ${cx} ${cy})"/>
+    <text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="26" font-weight="700" fill="${col}">${p}%</text>
+    <text x="${cx}" y="${cy+13}" text-anchor="middle" font-size="11" fill="#888">completed</text>
+    <text x="${cx}" y="${cy+27}" text-anchor="middle" font-size="10" fill="#aaa">${S.habits.filter(h=>isChecked(y,m,d,h.id)).length} of ${S.habits.length}</text>
+  `;
+  document.getElementById('todayMotivation').innerHTML=`<span class="pill ${pc(p)}" style="font-size:12px">${p>=80?'Amazing! Keep it up 💪':p>=50?'Good progress! 🎯':'You got this! Just start ⚡'}</span>`;
+  document.getElementById('todayDateLabel').textContent=d+' '+MONTHS[m];
+
+  // Week rings
+  let rings='';
+  for(let i=6;i>=0;i--){
+    const dt=new Date(now);dt.setDate(now.getDate()-i);
+    const dy=dt.getFullYear(),dm=dt.getMonth(),dd=dt.getDate();
+    const pp=dayPct(dy,dm,dd);
+    const isT=i===0;
+    const rc=pp>=80?'#1D9E75':pp>=50?'#BA7517':'#ccc';
+    const r2=16,c2=2*Math.PI*r2;
+    rings+=`<div class="rday ${isT?'istoday':''}">
+      <div class="rday-n">${DAYS[dt.getDay()]}</div>
+      <div class="rday-d">${dd}</div>
+      <svg width="40" height="40" style="display:block;margin:2px auto 0">
+        <circle cx="20" cy="20" r="${r2}" fill="none" stroke="${rc}33" stroke-width="4"/>
+        <circle cx="20" cy="20" r="${r2}" fill="none" stroke="${rc}" stroke-width="4" stroke-linecap="round"
+          stroke-dasharray="${c2*pp/100} ${c2}" transform="rotate(-90 20 20)"/>
+        <text x="20" y="24" text-anchor="middle" font-size="8" font-weight="700" fill="${rc}">${pp}%</text>
+      </svg>
+    </div>`;
+  }
+  document.getElementById('weekRings').innerHTML=rings;
+
+  // Tasks
+  let tasks='';
+  if(!S.habits.length){
+    tasks='<p style="color:var(--text2);font-size:13px;padding:12px 0;text-align:center">No habits yet — go to Manage tab!</p>';
+  } else {
+    S.habits.forEach(h=>{
+      const checked=isChecked(y,m,d,h.id);
+      const s=streak(h.id);
+      tasks+=`<div class="task">
+        <div class="cb ${checked?'chk':''}" onclick="toggle(${y},${m},${d},${h.id})"></div>
+        <span class="task-txt ${checked?'done':''}">${h.emoji} ${h.name}</span>
+        ${s>0?`<span class="stk">${s}d 🔥</span>`:''}
+      </div>`;
+    });
+  }
+  document.getElementById('taskList').innerHTML=tasks;
+
+  // Trend
+  dc('trend');
+  const labels=[],data=[];
+  for(let i=13;i>=0;i--){
+    const dt=new Date(now);dt.setDate(now.getDate()-i);
+    labels.push(dt.getDate()+'/'+(dt.getMonth()+1));
+    data.push(dayPct(dt.getFullYear(),dt.getMonth(),dt.getDate()));
+  }
+  charts['trend']=new Chart(document.getElementById('trendChart').getContext('2d'),{
+    type:'line',
+    data:{labels,datasets:[{label:'%',data,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,.1)',fill:true,tension:.4,pointRadius:2,pointBackgroundColor:'#1D9E75'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'rgba(128,128,128,.08)'}},x:{ticks:{font:{size:9}},grid:{display:false}}}}
+  });
+}
+
+function renderMonthly(){
+  const y=S.viewYear,m=S.viewMonth;
+  document.getElementById('monthLabel').textContent=MONTHS[m]+' '+y;
+  const days=daysInMonth(y,m);
+  const lastDay=(y===now.getFullYear()&&m===now.getMonth())?now.getDate():days;
+  let tc=0;
+  for(let d=1;d<=lastDay;d++)S.habits.forEach(h=>{if(isChecked(y,m,d,h.id))tc++;});
+  const tot=S.habits.length*lastDay;
+  const pct=tot>0?Math.round(tc/tot*100):0;
+  document.getElementById('monthMeta').innerHTML=`<span>Habits: <strong>${S.habits.length}</strong></span><span>Done: <strong>${tc}</strong></span><span>Progress: <strong>${pct}%</strong></span>`;
+  document.getElementById('monthBar').style.width=pct+'%';
+
+  let html='<thead><tr><th class="hn">Habit</th>';
+  for(let d=1;d<=days;d++){
+    const isT=(y===now.getFullYear()&&m===now.getMonth()&&d===now.getDate());
+    const dow=new Date(y,m,d).getDay();
+    const ws=dow===0&&d>1;
+    html+=`<th ${ws?'class="wsep"':''} style="${isT?'color:var(--green)':''}">${DAYS[dow]}<br><span style="font-size:8px;font-weight:400">${d}</span></th>`;
+  }
+  html+='<th>%</th><th>🔥</th></tr></thead><tbody>';
+  S.habits.forEach(h=>{
+    html+=`<tr><td class="hn">${h.emoji} ${h.name}</td>`;
+    for(let d=1;d<=days;d++){
+      const isT=(y===now.getFullYear()&&m===now.getMonth()&&d===now.getDate());
+      const isFut=(y===now.getFullYear()&&m===now.getMonth()&&d>now.getDate())||(y*12+m>now.getFullYear()*12+now.getMonth());
+      const chk=isChecked(y,m,d,h.id);
+      const dow=new Date(y,m,d).getDay();
+      const ws=dow===0&&d>1;
+      html+=`<td ${ws?'class="wsep"':''}>${isFut?`<div class="cb fut"></div>`:`<div class="cb ${chk?'chk':''} ${isT?'tod':''}" onclick="toggle(${y},${m},${d},${h.id})"></div>`}</td>`;
+    }
+    const p=habitMPct(h.id),s=streak(h.id);
+    html+=`<td><span class="pill ${pc(p)}">${p}%</span></td><td style="font-size:11px;font-weight:700;color:var(--amber)">${s>0?s:'-'}</td></tr>`;
+  });
+  html+='<tr style="border-top:2px solid var(--border)"><td class="hn" style="color:var(--text2);font-size:9px">Daily %</td>';
+  for(let d=1;d<=days;d++){
+    const p=dayPct(y,m,d);
+    const isFut=(y===now.getFullYear()&&m===now.getMonth()&&d>now.getDate());
+    html+=`<td style="font-size:8px;color:${isFut?'var(--text3)':bc(p)}">${isFut?'':p+'%'}</td>`;
+  }
+  html+='<td></td><td></td></tr></tbody>';
+  document.getElementById('mainGrid').innerHTML=html;
+}
+
+function renderAnalytics(){
+  const sorted=[...S.habits].sort((a,b)=>habitMPct(b.id)-habitMPct(a.id));
+  let html='';
+  sorted.forEach(h=>{
+    const p=habitMPct(h.id),s=streak(h.id);
+    html+=`<div class="aitem">
+      <div class="aitem-top">
+        <span style="font-size:15px">${h.emoji}</span>
+        <span style="flex:1;font-size:12px;font-weight:500">${h.name}</span>
+        <span class="pill ${pc(p)}">${p}%</span>
+        ${s>0?`<span class="stk">${s}d 🔥</span>`:''}
+      </div>
+      <div class="bbar"><div class="bfill" style="width:${p}%;background:${bc(p)}"></div></div>
+    </div>`;
+  });
+  document.getElementById('analyticsItems').innerHTML=html||'<p style="color:var(--text2);font-size:13px">No habits yet</p>';
+
+  dc('monthly');
+  const ml=[],md=[];
+  for(let i=5;i>=0;i--){
+    const dt=new Date(now.getFullYear(),now.getMonth()-i,1);
+    ml.push(MONTHS[dt.getMonth()].substring(0,3));
+    md.push(monthPct(dt.getFullYear(),dt.getMonth()));
+  }
+  charts['monthly']=new Chart(document.getElementById('monthlyChart').getContext('2d'),{
+    type:'bar',
+    data:{labels:ml,datasets:[{label:'%',data:md,backgroundColor:md.map(v=>v>=80?'rgba(29,158,117,.85)':v>=50?'rgba(186,117,23,.85)':'rgba(226,75,74,.85)'),borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'rgba(128,128,128,.08)'}},x:{ticks:{font:{size:10}},grid:{display:false}}}}
+  });
+}
+
+function renderManage(){
+  let html='';
+  if(!S.habits.length)html='<p style="color:var(--text2);font-size:13px;padding:8px 0;text-align:center">No habits yet. Add your first above!</p>';
+  S.habits.forEach(h=>{
+    const p=habitMPct(h.id),s=streak(h.id);
+    html+=`<div class="hitem">
+      <span style="font-size:18px">${h.emoji}</span>
+      <span class="hitem-name">${h.name}</span>
+      <span class="pill ${pc(p)} btn-sm">${p}%</span>
+      <button class="btn btn-r btn-sm" onclick="removeHabit(${h.id})"><i class="ti ti-trash"></i></button>
+    </div>`;
+  });
+  document.getElementById('habitList').innerHTML=html;
+}
+
+function exportCSV(){
+  const rows=[['Date','Day','Habit','Emoji','Done']];
+  const y=now.getFullYear(),m=now.getMonth();
+  for(let d=1;d<=now.getDate();d++){
+    S.habits.forEach(h=>{
+      const dt=new Date(y,m,d);
+      rows.push([dt.toLocaleDateString(),DAYSFULL[dt.getDay()],h.name,h.emoji,isChecked(y,m,d,h.id)?'Yes':'No']);
+    });
+  }
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  dl('habit-tracker-'+now.toISOString().split('T')[0]+'.csv','text/csv',csv);
+  toast('CSV downloaded! Open in Sheets');
+}
+function exportJSON(){
+  dl('habits-backup-'+now.toISOString().split('T')[0]+'.json','application/json',JSON.stringify(S,null,2));
+  toast('Backup saved!');
+}
+function triggerImport(){document.getElementById('importFile').click();}
+function handleImport(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.habits&&d.checks){S=d;save();render();toast('Data restored!');}else toast('Invalid backup file');}catch(err){toast('Error reading file');}};
+  r.readAsText(file);e.target.value='';
+}
+function dl(name,type,content){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=name;a.click();URL.revokeObjectURL(a.href);
+}
+function resetAll(){
+  if(!confirm('Delete ALL data? This cannot be undone.'))return;
+  S={habits:[],checks:{},viewMonth:now.getMonth(),viewYear:now.getFullYear(),nextId:1};
+  save();render();toast('All data cleared');
+}
+
+load();render();
+</script>
+</body>
+</html>
